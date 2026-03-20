@@ -43,7 +43,7 @@ public class AcademicYearController {
     @PutMapping("/change/{id}")
     public ResponseEntity<AcademicYear> changeActiveAcademicYear(@PathVariable("id") Long yearId){
         return ResponseEntity.ok(yearService.activateAcademicYear(yearId));
-        //testing to commit
+        //testidfdng to commit
     }
 
     @DeleteMapping("{id}")
