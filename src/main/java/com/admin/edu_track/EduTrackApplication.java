@@ -2,7 +2,7 @@ package com.admin.edu_track;
 
 import com.admin.edu_track.entities.*;
 import com.admin.edu_track.repositories.*;
-import com.admin.edu_track.requests.ExamRequestDto;
+import com.admin.edu_track.requestDto.ExamRequestDto;
 import com.admin.edu_track.services.ExamService;
 import com.admin.edu_track.services.SchoolClassService;
 import com.admin.edu_track.services.StudentRegistryService;
@@ -13,7 +13,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
 import java.time.LocalDate;
-import java.util.Date;
 
 @SpringBootApplication
 public class EduTrackApplication {

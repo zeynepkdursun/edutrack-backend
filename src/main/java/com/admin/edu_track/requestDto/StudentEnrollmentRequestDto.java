@@ -1,4 +1,4 @@
-package com.admin.edu_track.requests;
+package com.admin.edu_track.requestDto;
 
 import jakarta.validation.constraints.*;
 import lombok.Data;

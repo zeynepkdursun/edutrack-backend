@@ -5,7 +5,7 @@ import com.admin.edu_track.entities.AcademicYear;
 import com.admin.edu_track.entities.Exam;
 import com.admin.edu_track.repositories.AcademicYearRepository;
 import com.admin.edu_track.repositories.ExamRepository;
-import com.admin.edu_track.requests.ExamRequestDto;
+import com.admin.edu_track.requestDto.ExamRequestDto;
 import com.admin.edu_track.exceptions.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;

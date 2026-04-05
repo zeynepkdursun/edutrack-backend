@@ -1,13 +1,11 @@
 package com.admin.edu_track.repositories;
 import com.admin.edu_track.entities.Student;
-import com.admin.edu_track.responses.StudentResponseDto;
+import com.admin.edu_track.responseDto.StudentResponseDto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface StudentRepository extends JpaRepository<Student, Long> {
@@ -19,7 +17,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     List<Student> search(@Param("yearId") Long yearId,
                          @Param("classId") Long classId);
 */
-    @Query("SELECT new com.admin.edu_track.responses.StudentResponseDto(" +
+    @Query("SELECT new com.admin.edu_track.responseDto.StudentResponseDto(" +
             "s.id, s.name, s.surname, s.studentNumber, sc.level, sc.branch, ay.id, ay.label) " +
             "FROM Student s " +
             "JOIN StudentRegistry sr ON s.id = sr.student.id " +

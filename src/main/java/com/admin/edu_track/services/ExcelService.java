@@ -2,8 +2,8 @@ package com.admin.edu_track.services;
 
 import com.admin.edu_track.embeddings.Rankings;
 import com.admin.edu_track.entities.Student;
-import com.admin.edu_track.requests.ExamResultRequestDto;
-import com.admin.edu_track.responses.LessonScoreDto;
+import com.admin.edu_track.requestDto.ExamResultRequestDto;
+import com.admin.edu_track.responseDto.LessonScoreDto;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;

@@ -1,10 +1,9 @@
-package com.admin.edu_track.requests;
+package com.admin.edu_track.requestDto;
 
 
 import lombok.Data;
 
 import java.time.LocalDate;
-import java.util.Date;
 
 @Data
 public class ExamRequestDto {

@@ -1,12 +1,16 @@
 package com.admin.edu_track.services;
 
 
+import com.admin.edu_track.constants.ErrorMessages;
 import com.admin.edu_track.entities.*;
+import com.admin.edu_track.exceptions.AlreadyExistsException;
+import com.admin.edu_track.mappers.ExamResultMapper;
 import com.admin.edu_track.repositories.*;
-import com.admin.edu_track.requests.ExamResultRequestDto;
-import com.admin.edu_track.responses.ExamResultResponseDto;
-import com.admin.edu_track.responses.LessonScoreDto;
+import com.admin.edu_track.requestDto.ExamResultRequestDto;
+import com.admin.edu_track.responseDto.ExamResultResponseDto;
+import com.admin.edu_track.responseDto.LessonScoreDto;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +27,7 @@ public class ExamResultService {
     private final ExamRepository examRepo;
     private final LessonScoreRepository lessonScoreRepo;
     private final LessonRepository lessonRepo;
+    private final ExamResultMapper resultMapper;
 
     public List<ExamResultResponseDto> getAllExamResultsDto(Long studentId, Long examId) {
         // 1. Veritabanından her şeyi tek sorguda çek (N+1 bitti!)
@@ -32,83 +37,25 @@ public class ExamResultService {
         return results.stream()
                 .map(this::convertToResponseDto)
                 .collect(Collectors.toList());
-
-        /*
-        .map(this::convertToResponseDto)
-        .map(er -> convertToResponseDto(er))
-        */
     }
-
-    public ExamResult saveExamResult(ExamResultRequestDto dto){
+    @Transactional
+    public ExamResult saveExamResult(ExamResultRequestDto examResultRequestDto){
         // 1. Önce nesneleri güvenle çekiyoruz (findById ile NPE riskini sıfırlıyoruz)
-        Student student = studentRepo.findById(dto.getStudentId())
-                .orElseThrow(() -> new RuntimeException("Öğrenci bulunamadı"));
-        Exam exam = examRepo.findById(dto.getExamId())
-                .orElseThrow(() -> new RuntimeException("Sınav bulunamadı"));
+        Student student = findStudentById(examResultRequestDto.getStudentId());
+        Exam exam = findExamById(examResultRequestDto.getExamId());
 
-        // 2. Önce bu öğrenci bu sınava zaten girmiş mi? (Double Entry Check)
-        // Çift kayıt kontrolü
-        if (resultRepo.existsByStudentIdAndExamId(student.getId(), exam.getId())) {
-            throw new RuntimeException("Bu öğrenci için bu sınav sonucu zaten girilmiş!");
-        }
+        validateExamConsistency(student, exam, examResultRequestDto);
 
-        // 3. Akademik Kayıt ve Seviye Kontrolü
-        // Kontrol: Bu öğrenci, bu sınavın yapıldığı yılda gerçekten okula kayıtlı mı?
-        /*boolean isRegisteredThatYear = registryRepo.existsByStudentIdAndAcademicYearId(studentId, yearId);
-        if (!isRegisteredThatYear){
-            throw new RuntimeException("Sinav sonucu kaydedilen ogrenci girilen akademik yilda kayitli degil");
-        }*/
-
-
-        // Öğrencinin o yıldaki seviyesini (level) buluyoruz
-        int studentLevel = registryRepo.findSchoolClassLevelByStudentIdAndYearId(dto.getStudentId(), exam.getAcademicYear().getId())
-                .orElseThrow(() -> new RuntimeException("Öğrencinin bu yıl için kayıtlı bir sınıfı bulunamadı!"));
-
-        // Kontrol: Bu öğrencinin seviyesi (sinifi: 5, 6, 7 veya 8),
-        // bu sınavın seviyesiyle ayni mi?
-        if (exam.getLevel() != studentLevel){
-            throw new RuntimeException("HATA: Öğrencinin seviyesi (" + studentLevel + ") sınav seviyesiyle (" + exam.getLevel() + ") uyuşmuyor!"); }
-
-
-        // 4. Entity Hazırlığı
-        ExamResult examResult = new ExamResult();
-        examResult.setStudent(student);
-        examResult.setExam(exam);
-        examResult.setCorrectCount(dto.getTotalCorrect());
-        examResult.setWrongCount(dto.getTotalWrong());
-        examResult.setNetCount(dto.getNetCount());
-        examResult.setLgsScore(dto.getLgsScore());
-        examResult.setRankings(dto.getRankings());
-
-
-        // 5. Dersleri Map'e Al (Performans ve Güvenlik İçin)
+        // 5. Dersleri Map'e Al (Performans ve Güvenlik İçin) (Performans için tek sorgu)
         Map<String, Lesson> lessonMap = lessonRepo.findAll().stream()
                 .collect(Collectors.toMap(Lesson::getName, lesson -> lesson));
+        // 4. MAPPING
+        ExamResult examResult = resultMapper.toEntity(examResultRequestDto, student, exam, lessonMap);
 
-        // 6. LessonScores Bağlantıları
-        if (dto.getLessonScores() != null) {
-            for (LessonScoreDto scoreDto : dto.getLessonScores()) {
-                LessonScore score = new LessonScore();
-
-                // Map üzerinden Lesson nesnesini bul
-                Lesson lesson = lessonMap.get(scoreDto.getLessonName());
-                if (lesson == null) {
-                    throw new RuntimeException("Sistemde tanımlı olmayan ders: " + scoreDto.getLessonName());
-                }
-
-                score.setLesson(lesson);
-                score.setCorrectCount(scoreDto.getCorrectCount());
-                score.setWrongCount(scoreDto.getWrongCount());
-                score.setNetCount(scoreDto.getNetCount());
-
-                // Çift yönlü ilişkiyi kur (ExamResult <-> LessonScore)
-                score.setExamResult(examResult);
-                examResult.getLessonScores().add(score);
-            }
-        }
         return resultRepo.save(examResult);
     }
 
+    @Transactional
     public ExamResult saveExamResultWithNo(ExamResultRequestDto dto, String studentNo) {
         // 1. Numaradan öğrenciyi bul
         Student student = studentRepo.findByStudentNumber(studentNo);
@@ -246,6 +193,42 @@ public class ExamResultService {
     //UPDATE KISMINI YAP SONRA DA LGSSCORE'LARINI GUNCELLE
     //OGRENCININ SINIFIYLA DENEMENIN LEVELININ (SINIFINI) AYNI OLMASI CONSTRAINTINI YAZ
 
+    private Student findStudentById(Long studentId) {
+        return studentRepo.findById(studentId)
+                .orElseThrow(() -> {
+                    String errorMessage = String.format(ErrorMessages.STUDENT_NOT_FOUND, studentId);
+                    return new EntityNotFoundException(errorMessage);
+                });
+    }
+
+    private Exam findExamById(Long examId) {
+        return examRepo.findById(examId)
+                .orElseThrow(() -> {
+                    String errorMessage = String.format(ErrorMessages.EXAM_NOT_FOUND, examId);
+                    return new EntityNotFoundException(errorMessage);
+                });
+    }
+
+    private void validateExamConsistency(Student student, Exam exam, ExamResultRequestDto examResultRequestDto){
+        // 2. Önce bu öğrenci bu sınava zaten girmiş mi? (Double Entry Check)
+        // Çift kayıt kontrolü
+        if (resultRepo.existsByStudentIdAndExamId(student.getId(), exam.getId())) {
+            throw new AlreadyExistsException(
+                    String.format(ErrorMessages.STUDENT_EXAM_RESULT_ALREADY_EXISTS, student.getId(), exam.getId())
+            );
+        }
+        /// ///////////////////// , BİR ONCEKİ PROMPTTAKİ İKİ KULLANIM FARKINI OGREN
+        //////////////////////////  BU İKİ KULLANIMI DA REFACTOR ET
+        // Öğrencinin o yıldaki seviyesini (level) buluyoruz
+        int studentLevel = registryRepo.findSchoolClassLevelByStudentIdAndYearId(examResultRequestDto.getStudentId(), exam.getAcademicYear().getId())
+                .orElseThrow(() -> new RuntimeException("Öğrencinin bu yıl için kayıtlı bir sınıfı bulunamadı!"));
+
+        // Kontrol: Bu öğrencinin seviyesi (sinifi: 5, 6, 7 veya 8),
+        // bu sınavın seviyesiyle ayni mi?
+        if (exam.getLevel() != studentLevel){
+            throw new RuntimeException("HATA: Öğrencinin seviyesi (" + studentLevel + ") sınav seviyesiyle (" + exam.getLevel() + ") uyuşmuyor!"); }
 
 
+
+    }
 }

@@ -1,6 +1,6 @@
 package com.admin.edu_track.repositories;
 import com.admin.edu_track.entities.ExamResult;
-import com.admin.edu_track.responses.ExamResultResponseDto;
+import com.admin.edu_track.responseDto.ExamResultResponseDto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,7 +17,7 @@ public interface ExamResultRepository extends JpaRepository<ExamResult, Long>{
             "AND (:examId IS NULL OR er.exam.id = :examId)")
     List<ExamResult> search(@Param("studentId") Long studentId, @Param("examId") Long examId);
 
-    @Query("SELECT new com.admin.edu_track.responses.ExamResultResponseDto(" +
+    @Query("SELECT new com.admin.edu_track.responseDto.ExamResultResponseDto(" +
             "er.id, s.name, s.surname, s.studentNumber, reg.schoolClass.branch, reg.schoolClass.level, " +
             "er.exam.title, er.exam.date, er.lgsScore, er.netCount, er.correctCount, er.wrongCount, er.rankings) " +
             "FROM ExamResult er " +
@@ -36,7 +36,7 @@ public interface ExamResultRepository extends JpaRepository<ExamResult, Long>{
             "AND (:examId IS NULL OR e.id = :examId)")
     List<ExamResult> findAllWithDetails(@Param("studentId") Long studentId, @Param("examId") Long examId);
 
-    @Query("SELECT new com.admin.edu_track.responses.ExamResultResponseDto(" +
+    @Query("SELECT new com.admin.edu_track.responseDto.ExamResultResponseDto(" +
             "r.id, s.name, s.surname, s.studentNumber, reg.schoolClass.branch, reg.schoolClass.level, " +
             "r.exam.title, r.exam.date, r.lgsScore, r.netCount, r.correctCount, r.wrongCount, r.rankings) " +
             "FROM ExamResult r " +

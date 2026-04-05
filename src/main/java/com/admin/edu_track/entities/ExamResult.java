@@ -1,6 +1,8 @@
 package com.admin.edu_track.entities;
 
 import com.admin.edu_track.embeddings.Rankings;
+import com.admin.edu_track.embeddings.ScoreMetrics;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -25,10 +27,8 @@ public class ExamResult {
     @JoinColumn(name = "exam_id", nullable = false)
     private Exam exam;
 
-    private int correctCount;
-    private int wrongCount;
-    private double netCount;
-    private double lgsScore;
+    @Embedded
+    private ScoreMetrics scoreMetrics;
 
     @Embedded
     private Rankings rankings;
@@ -40,4 +40,29 @@ public class ExamResult {
     @OneToMany(mappedBy = "examResult", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LessonScore> lessonScores = new ArrayList<>();
 
+    // --- HELPER METHODS ---
+
+    // Çift yönlü ilişkiyi korumak için (Service katmanını rahatlatır)
+    public void addLessonScore(LessonScore score) {
+        lessonScores.add(score);
+        score.setExamResult(this);
+    }
+
+    public void removeLessonScore(LessonScore score) {
+        lessonScores.remove(score);
+        score.setExamResult(null);
+    }
+
+    // Hibernate/JPA için güvenli equals/hashCode
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ExamResult that)) return false;
+        return id != null && id.equals(that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }

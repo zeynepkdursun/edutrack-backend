@@ -1,7 +1,7 @@
 package com.admin.edu_track.controllers;
 
 import com.admin.edu_track.entities.StudentRegistry;
-import com.admin.edu_track.requests.StudentEnrollmentRequestDto;
+import com.admin.edu_track.requestDto.StudentEnrollmentRequestDto;
 import com.admin.edu_track.services.StudentEnrollmentService;
 import com.admin.edu_track.services.StudentService;
 import jakarta.validation.Valid;

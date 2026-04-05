@@ -5,7 +5,7 @@ import com.admin.edu_track.entities.StudentRegistry;
 import com.admin.edu_track.repositories.AcademicYearRepository;
 import com.admin.edu_track.repositories.SchoolClassRepository;
 
-import com.admin.edu_track.requests.StudentEnrollmentRequestDto;
+import com.admin.edu_track.requestDto.StudentEnrollmentRequestDto;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

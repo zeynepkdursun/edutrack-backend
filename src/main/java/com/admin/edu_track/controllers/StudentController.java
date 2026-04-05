@@ -1,13 +1,12 @@
 package com.admin.edu_track.controllers;
 import com.admin.edu_track.entities.Student;
-import com.admin.edu_track.responses.StudentResponseDto;
+import com.admin.edu_track.responseDto.StudentResponseDto;
 import com.admin.edu_track.services.StudentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 
 @RestController

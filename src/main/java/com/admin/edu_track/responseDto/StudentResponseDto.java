@@ -1,4 +1,4 @@
-package com.admin.edu_track.responses;
+package com.admin.edu_track.responseDto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -3,10 +3,9 @@ package com.admin.edu_track.controllers;
 
 import com.admin.edu_track.entities.Exam;
 import com.admin.edu_track.repositories.AcademicYearRepository;
-import com.admin.edu_track.requests.ExamRequestDto;
+import com.admin.edu_track.requestDto.ExamRequestDto;
 import com.admin.edu_track.services.ExamService;
 import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

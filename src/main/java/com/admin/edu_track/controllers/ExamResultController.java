@@ -2,20 +2,17 @@ package com.admin.edu_track.controllers;
 
 
 import com.admin.edu_track.entities.ExamResult;
-import com.admin.edu_track.requests.ExamResultRequestDto;
-import com.admin.edu_track.responses.ExamResultResponseDto;
+import com.admin.edu_track.requestDto.ExamResultRequestDto;
+import com.admin.edu_track.responseDto.ExamResultResponseDto;
 import com.admin.edu_track.services.ExamResultService;
 import com.admin.edu_track.services.ExcelService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Optional;
 
 
 @RestController
