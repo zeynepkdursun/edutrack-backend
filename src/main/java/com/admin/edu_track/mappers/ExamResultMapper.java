@@ -30,8 +30,20 @@ public class ExamResultMapper {
         return examResult;
     }
 
-    private LessonScore convertToLessonScoreEntity(LessonScoreDto scoreDto, Map<String, Lesson> lessonMap) {
-        Lesson lesson = lessonMap.get(scoreDto.getLessonName());
+    public void updateEntityFromDto(ExamResultRequestDto examResultRequestDto, ExamResult existingExamResult){
+        if(examResultRequestDto == null) {
+            return;
+        }
+        if(examResultRequestDto.getScoreMetrics() != null){
+            existingExamResult.setScoreMetrics(examResultRequestDto.getScoreMetrics());
+        }
+        if(examResultRequestDto.getRankings() != null){
+            existingExamResult.setRankings(examResultRequestDto.getRankings());
+        }
+    }
+
+    private LessonScore convertToLessonScoreEntity(LessonScoreDto lessonScoreDto, Map<String, Lesson> lessonMap) {
+        Lesson lesson = lessonMap.get(lessonScoreDto.getLessonName());
 
         if(lesson == null) {
             throw new RuntimeException("Sistemde tanimli olmayan ders: " + scoreDto.getLessonName());
