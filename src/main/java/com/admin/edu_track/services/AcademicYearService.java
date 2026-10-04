@@ -3,6 +3,7 @@ package com.admin.edu_track.services;
 
 import com.admin.edu_track.entities.AcademicYear;
 import com.admin.edu_track.exceptions.AlreadyExistsException;
+import com.admin.edu_track.exceptions.ResourceNotFoundException;
 import com.admin.edu_track.repositories.AcademicYearRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -25,21 +26,24 @@ public class AcademicYearService {
         return yearRepo.findById(yearId).orElse(null);
     }
     public AcademicYear getActiveAcademicYear(){
-        return yearRepo.findByIsActiveTrue().get();
+        return yearRepo.findByIsActiveTrue().orElseThrow(() -> new ResourceNotFoundException("There is no active academic year!"));
     }
 
     ///  POST METHODS
     public AcademicYear createAcademicYear(AcademicYear year){
-        if(!AcademicYear.isSequentialYear(year.getLabel())){
-            throw new IllegalArgumentException("Yıllar ardışık olmalıdır.");
+        if (!isSequentialYear(year.getLabel())){
+            throw new IllegalArgumentException("Years must be sequential");
         }
 
-        if(yearRepo.existsByLabel(year.getLabel())){
-            throw new AlreadyExistsException("Bu akademik yıl zaten kayıtlı!");
+        if (yearRepo.existsByLabel(year.getLabel())){
+            throw new AlreadyExistsException("This academic year already exists!");
         }
-        if(yearRepo.existsByIsActiveTrue() && year.isActive()){
-            throw new AlreadyExistsException("Sistemde aktif akademik yıl zaten mevcut!");
+
+        if (yearRepo.existsByIsActiveTrue() && year.isActive()){
+            throw new AlreadyExistsException("There is already active academic year in the system!");
+
         }
+
         return yearRepo.save(year);
     }
 
@@ -47,13 +51,12 @@ public class AcademicYearService {
     public AcademicYear activateAcademicYear(Long newYearId){
         yearRepo.findByIsActiveTrue().ifPresent(oldYear -> {
             oldYear.setActive(false);
-            yearRepo.save(oldYear);
         });
         AcademicYear newYear = yearRepo.findById(newYearId)
-                .orElseThrow(() -> new RuntimeException("Aktif edilecek yil bulunamadi!"));
+                .orElseThrow(() -> new RuntimeException("No academic year found to activate!"));
 
         newYear.setActive(true);
-        return yearRepo.save(newYear);
+        return newYear; // or return yearRepo.save(newYear);
     }
 
     public boolean deleteAcademicYear(Long yearId){
@@ -62,5 +65,15 @@ public class AcademicYearService {
             return true;
         }
         return false;
+    }
+
+    private boolean isSequentialYear(String academicYear) {
+
+        String[] years = academicYear.split("-");
+
+        int first = Integer.parseInt(years[0]);
+        int second = Integer.parseInt(years[1]);
+
+        return second == first + 1;
     }
 }
