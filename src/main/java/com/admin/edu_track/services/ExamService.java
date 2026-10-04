@@ -3,10 +3,10 @@ package com.admin.edu_track.services;
 
 import com.admin.edu_track.entities.AcademicYear;
 import com.admin.edu_track.entities.Exam;
+import com.admin.edu_track.exceptions.ResourceNotFoundException;
 import com.admin.edu_track.repositories.AcademicYearRepository;
 import com.admin.edu_track.repositories.ExamRepository;
 import com.admin.edu_track.requestDto.ExamRequestDto;
-import com.admin.edu_track.exceptions.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -48,7 +48,7 @@ public class ExamService {
 
         // Entity ilişkisini burada kuruyoruz
         newExam.setAcademicYear(yearRepo.findById(dto.getAcademicYearId())
-                .orElseThrow(() -> new EntityNotFoundException("Akademik yil bulunamadi")));
+                .orElseThrow(() -> new ResourceNotFoundException("Akademik yil bulunamadi")));
 
         return examRepo.save(newExam);
     }
@@ -57,8 +57,8 @@ public class ExamService {
     public Exam updateExam(Long examId, Exam updatedExam){
 
         AcademicYear newYear = yearRepo.findById(updatedExam.getAcademicYear().getId()).orElseThrow(
-                () -> new EntityNotFoundException("Akademik yil bulunamadi"));
-        Exam existingExam = examRepo.findById(examId).orElseThrow(() -> new EntityNotFoundException("Sinav bulunamadi"));
+                () -> new ResourceNotFoundException("Akademik yil bulunamadi"));
+        Exam existingExam = examRepo.findById(examId).orElseThrow(() -> new ResourceNotFoundException("Sinav bulunamadi"));
         existingExam.setDate(updatedExam.getDate());
         existingExam.setTitle(updatedExam.getTitle());
         existingExam.setAcademicYear(newYear);
@@ -68,7 +68,7 @@ public class ExamService {
 
     /// DELETE METHOD
     public void deleteExam(Long examId){
-        Exam exam = examRepo.findById(examId).orElseThrow(() -> new EntityNotFoundException("Sinav bulunamadi"));
+        Exam exam = examRepo.findById(examId).orElseThrow(() -> new ResourceNotFoundException("Sinav bulunamadi"));
         examRepo.delete(exam);
     }
 }

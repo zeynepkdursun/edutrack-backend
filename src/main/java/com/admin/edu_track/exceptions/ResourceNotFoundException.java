@@ -4,15 +4,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 @ResponseStatus(HttpStatus.NOT_FOUND)
-public class EntityNotFoundException extends RuntimeException {
-  public EntityNotFoundException(String message) {
+public class ResourceNotFoundException extends RuntimeException {
+  public ResourceNotFoundException(String message) {
     super(message);
   }
 }
 
 
 /*
-EntityNotFoundException
+ResourceNotFoundException
 BadRequestException
 ConflictException
 UnauthorizedException
@@ -21,9 +21,9 @@ UnauthorizedException
 
 
 /*
-  public class EntityNotFoundException extends RuntimeException {
+  public class ResourceNotFoundException extends RuntimeException {
 
-      public EntityNotFoundException(String entity, Object id) {
+      public ResourceNotFoundException(String entity, Object id) {
           super(entity + " not found with id: " + id);
       }
   }
@@ -31,5 +31,5 @@ UnauthorizedException
 
 
 
-  throw new EntityNotFoundException("Student", id);
+  throw new ResourceNotFoundException("Student", id);
 */

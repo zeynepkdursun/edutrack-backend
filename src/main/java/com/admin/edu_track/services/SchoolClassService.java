@@ -3,7 +3,7 @@ package com.admin.edu_track.services;
 
 import com.admin.edu_track.entities.SchoolClass;
 import com.admin.edu_track.exceptions.AlreadyExistsException;
-import com.admin.edu_track.exceptions.EntityNotFoundException;
+import com.admin.edu_track.exceptions.ResourceNotFoundException;
 import com.admin.edu_track.repositories.SchoolClassRepository;
 import org.springframework.stereotype.Service;
 
@@ -48,7 +48,7 @@ public class SchoolClassService {
     public SchoolClass updateClass(Long classId, SchoolClass newClass){
         // 1. Önce güncellenecek sınıfı bul
         SchoolClass existingClass = classRepo.findById(classId).orElseThrow(
-                () -> new EntityNotFoundException("Sinif bulunamadi")
+                () -> new ResourceNotFoundException("Sinif bulunamadi")
         );
 
         // Değişiklik kontrolü: Level, Branch VEYA Year ID değişmiş mi?
@@ -79,7 +79,7 @@ public class SchoolClassService {
 
     ///  DELETE METHOD
     public void deleteClass(Long classId){
-        SchoolClass schoolClass = classRepo.findById(classId).orElseThrow(() -> new EntityNotFoundException("Sinif bulunamadi"));
+        SchoolClass schoolClass = classRepo.findById(classId).orElseThrow(() -> new ResourceNotFoundException("Sinif bulunamadi"));
         classRepo.delete(schoolClass);
     }
 }

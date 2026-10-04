@@ -17,7 +17,7 @@ public interface ExamResultRepository extends JpaRepository<ExamResult, Long>{
             "AND (:examId IS NULL OR er.exam.id = :examId)")
     List<ExamResult> search(@Param("studentId") Long studentId, @Param("examId") Long examId);
 
-    @Query("SELECT new com.admin.edu_track.responseDto.ExamResultResponseDto(" +
+/*    @Query("SELECT new com.admin.edu_track.responseDto.ExamResultResponseDto(" +
             "er.id, s.name, s.surname, s.studentNumber, reg.schoolClass.branch, reg.schoolClass.level, " +
             "er.exam.title, er.exam.date, er.lgsScore, er.netCount, er.correctCount, er.wrongCount, er.rankings) " +
             "FROM ExamResult er " +
@@ -26,8 +26,8 @@ public interface ExamResultRepository extends JpaRepository<ExamResult, Long>{
             "WHERE (:studentId IS NULL OR er.student.id = :studentId) " +
             "AND (:examId IS NULL OR er.exam.id = :examId)")
     List<ExamResultResponseDto> searchDtos(@Param("studentId") Long studentId, @Param("examId") Long examId);
-
-    @Query("SELECT DISTINCT er FROM ExamResult er " +
+*/
+    /*@Query("SELECT DISTINCT er FROM ExamResult er " +
             "JOIN FETCH er.student s " +
             "JOIN FETCH er.exam e " +
             "JOIN FETCH e.academicYear ay " +
@@ -35,8 +35,19 @@ public interface ExamResultRepository extends JpaRepository<ExamResult, Long>{
             "WHERE (:studentId IS NULL OR s.id = :studentId) " +
             "AND (:examId IS NULL OR e.id = :examId)")
     List<ExamResult> findAllWithDetails(@Param("studentId") Long studentId, @Param("examId") Long examId);
+*/
 
-    @Query("SELECT new com.admin.edu_track.responseDto.ExamResultResponseDto(" +
+    @Query("SELECT DISTINCT er FROM ExamResult er " +
+            "JOIN FETCH er.student s " +
+            "JOIN FETCH er.exam e " +
+            "JOIN FETCH e.academicYear ay " +
+            "LEFT JOIN FETCH er.lessonScores ls " +
+            "LEFT JOIN FETCH ls.lesson " +
+            "WHERE (:studentId IS NULL OR s.id = :studentId) " +
+            "AND (:examId IS NULL OR e.id = :examId)")
+    List<ExamResult> findAllWithDetails(@Param("studentId") Long studentId, @Param("examId") Long examId);
+
+ /*   @Query("SELECT new com.admin.edu_track.responseDto.ExamResultResponseDto(" +
             "r.id, s.name, s.surname, s.studentNumber, reg.schoolClass.branch, reg.schoolClass.level, " +
             "r.exam.title, r.exam.date, r.lgsScore, r.netCount, r.correctCount, r.wrongCount, r.rankings) " +
             "FROM ExamResult r " +
@@ -44,7 +55,7 @@ public interface ExamResultRepository extends JpaRepository<ExamResult, Long>{
             "JOIN StudentRegistry reg ON reg.student.id = s.id AND reg.academicYear.id = r.exam.academicYear.id " +
             "WHERE r.exam.id = :examId")
     List<ExamResultResponseDto> findResultsByExamId(@Param("examId") Long examId);
-
+*/
     boolean existsByStudentIdAndExamId(Long studentId, Long examId);
 
 }

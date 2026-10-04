@@ -6,7 +6,7 @@ import com.admin.edu_track.entities.SchoolClass;
 import com.admin.edu_track.entities.Student;
 import com.admin.edu_track.entities.StudentRegistry;
 import com.admin.edu_track.exceptions.AlreadyExistsException;
-import com.admin.edu_track.exceptions.EntityNotFoundException;
+import com.admin.edu_track.exceptions.ResourceNotFoundException;
 import com.admin.edu_track.repositories.AcademicYearRepository;
 import com.admin.edu_track.repositories.SchoolClassRepository;
 import com.admin.edu_track.repositories.StudentRegistryRepository;
@@ -46,13 +46,13 @@ public class StudentRegistryService {
             // 2. Veritabanından tam nesneleri çek ve parametre gelen nesneye set et
         // Bu sayede yeni bir 'new StudentRegistry()' oluşturmana gerek kalmaz.
         newRegistry.setStudent(studentRepo.findById(newRegistry.getStudent().getId())
-                .orElseThrow(() -> new EntityNotFoundException("Öğrenci bulunamadı")));
+                .orElseThrow(() -> new ResourceNotFoundException("Öğrenci bulunamadı")));
 
         newRegistry.setSchoolClass(classRepo.findById(newRegistry.getSchoolClass().getId())
-                .orElseThrow(() -> new EntityNotFoundException("Sınıf bulunamadı")));
+                .orElseThrow(() -> new ResourceNotFoundException("Sınıf bulunamadı")));
 
         newRegistry.setAcademicYear(yearRepo.findById(newRegistry.getAcademicYear().getId())
-                .orElseThrow(() -> new EntityNotFoundException("Akademik yıl bulunamadı")));
+                .orElseThrow(() -> new ResourceNotFoundException("Akademik yıl bulunamadı")));
         return registryRepo.save(newRegistry);
     }
 
@@ -65,17 +65,17 @@ public class StudentRegistryService {
             throw new AlreadyExistsException("Bu öğrenci bu yıl zaten başka bir sınıfa kayıtlı!");
         }
         Student newStudent = studentRepo.findById(newRegistry.getStudent().getId())
-                .orElseThrow(()-> new EntityNotFoundException("Öğrenci bulunamadı"));
+                .orElseThrow(()-> new ResourceNotFoundException("Öğrenci bulunamadı"));
         SchoolClass newClass = classRepo.findById(newRegistry.getSchoolClass().getId())
-                .orElseThrow(() -> new EntityNotFoundException("Sınıf bulunamadı"));
+                .orElseThrow(() -> new ResourceNotFoundException("Sınıf bulunamadı"));
         AcademicYear newYear = yearRepo.findById(newRegistry.getAcademicYear().getId())
-                .orElseThrow(() -> new EntityNotFoundException("Akademik yıl bulunamadı"));
+                .orElseThrow(() -> new ResourceNotFoundException("Akademik yıl bulunamadı"));
         return registryRepo.findById(registryId).map((currentRegistry) -> {
             currentRegistry.setStudent(newStudent);
             currentRegistry.setSchoolClass(newClass);
             currentRegistry.setAcademicYear(newYear);
             return registryRepo.save(currentRegistry);
-        }).orElseThrow(() -> new EntityNotFoundException("Kayıt bulunamadı!"));
+        }).orElseThrow(() -> new ResourceNotFoundException("Kayıt bulunamadı!"));
     }
 
     public boolean deleteRegistry(Long registryId){

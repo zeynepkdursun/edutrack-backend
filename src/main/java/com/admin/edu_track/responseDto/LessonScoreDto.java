@@ -1,5 +1,7 @@
 package com.admin.edu_track.responseDto;
 
+import com.admin.edu_track.embeddings.ScoreMetrics;
+import jakarta.persistence.Embedded;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,7 +12,6 @@ import lombok.NoArgsConstructor;
 public class LessonScoreDto
 {
     private String lessonName;
-    private Integer correctCount;
-    private Integer wrongCount;
-    private Double netCount;
+    @Embedded
+    private ScoreMetrics scoreMetrics;
 }

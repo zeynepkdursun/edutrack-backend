@@ -4,6 +4,7 @@ package com.admin.edu_track.services;
 import com.admin.edu_track.constants.ErrorMessages;
 import com.admin.edu_track.entities.*;
 import com.admin.edu_track.exceptions.AlreadyExistsException;
+import com.admin.edu_track.exceptions.ResourceNotFoundException;
 import com.admin.edu_track.mappers.ExamResultMapper;
 import com.admin.edu_track.repositories.*;
 import com.admin.edu_track.requestDto.ExamResultRequestDto;
@@ -29,7 +30,7 @@ public class ExamResultService {
     private final LessonRepository lessonRepo;
     private final ExamResultMapper resultMapper;
 
-    public List<ExamResultResponseDto> getAllExamResultsDto(Long studentId, Long examId) {
+    /*public List<ExamResultResponseDto> getAllExamResultsDto(Long studentId, Long examId) {
         // 1. Veritabanından her şeyi tek sorguda çek (N+1 bitti!)
         List<ExamResult> results = resultRepo.findAllWithDetails(studentId, examId);
 
@@ -37,61 +38,100 @@ public class ExamResultService {
         return results.stream()
                 .map(this::convertToResponseDto)
                 .collect(Collectors.toList());
+    }*/
+    public List<ExamResultResponseDto> getAllExamResultsDto(Long studentId, Long examId) {
+        List<ExamResult> results = resultRepo.findAllWithDetails(studentId, examId);
+        return results.stream()
+                .map(this::convertToResponseDto)
+                .collect(Collectors.toList());
     }
+
+
+    private ExamResultResponseDto convertToResponseDto(ExamResult examResult) {
+        if (examResult == null) {
+            return null;
+        }
+
+        ExamResultResponseDto dto = new ExamResultResponseDto();
+        dto.setId(examResult.getId());
+
+        // Öğrenci & Sınav Bilgileri
+        if (examResult.getStudent() != null) {
+            dto.setId(examResult.getStudent().getId());
+            dto.setStudentName(examResult.getStudent().getName());
+            dto.setStudentNumber(examResult.getStudent().getStudentNumber());
+        }
+
+        if (examResult.getExam() != null) {
+            dto.setExamTitle(examResult.getExam().getTitle());
+        }
+
+        // Ders Notları / Skor Listesi
+        if (examResult.getLessonScores() != null) {
+            List<LessonScoreDto> scoreDtos = examResult.getLessonScores().stream()
+                    .map(score -> {
+                        LessonScoreDto scoreDto = new LessonScoreDto();
+                        if (score.getLesson() != null) {
+                            scoreDto.setLessonName(score.getLesson().getName());
+                        }
+                        scoreDto.setScoreMetrics(score.getScoreMetrics());
+                        return scoreDto;
+                    })
+                    .collect(Collectors.toList());
+
+            dto.setLessonScores(scoreDtos);
+        }
+
+        // Varsa toplam puan / net vb. alanlar:
+        // dto.setTotalScore(examResult.getTotalScore());
+
+        return dto;
+    }
+
     @Transactional
     public ExamResult saveExamResult(ExamResultRequestDto examResultRequestDto){
-        // 1. Önce nesneleri güvenle çekiyoruz (findById ile NPE riskini sıfırlıyoruz)
-        Student student = findStudentById(examResultRequestDto.getStudentId());
-        Exam exam = findExamById(examResultRequestDto.getExamId());
+        // 1. Once nesneler cekiliyor
+        Student student = findStudentByIdOrThrow(examResultRequestDto.getStudentId());
+        Exam exam = findExamByIdOrThrow(examResultRequestDto.getExamId());
 
         validateExamConsistency(student, exam, examResultRequestDto);
 
-        // 5. Dersleri Map'e Al (Performans ve Güvenlik İçin) (Performans için tek sorgu)
-        Map<String, Lesson> lessonMap = lessonRepo.findAll().stream()
-                .collect(Collectors.toMap(Lesson::getName, lesson -> lesson));
+        // Dersleri Map'e Al (Performans ve Güvenlik İçin) (Performans için tek sorgu)
+        // LessonMap: {Turkce, Lesson Object}
+        Map<String, Lesson> lessonMap = fetchLessonMap();
+
+        // lessonScoreDtoMap: { Turkce, LessonScoreDto(Turkce, scoreMetrics) }
+        Map<String, LessonScoreDto> lessonScoreDtoMap = toLessonScoreDtoMap(examResultRequestDto.getLessonScores());
+
         // 4. MAPPING
-        ExamResult examResult = resultMapper.toEntity(examResultRequestDto, student, exam, lessonMap);
+        ExamResult examResult = resultMapper.toEntity(examResultRequestDto, student, exam, lessonMap, lessonScoreDtoMap);
 
         return resultRepo.save(examResult);
     }
 
     @Transactional
-    public ExamResult saveExamResultWithNo(ExamResultRequestDto dto, String studentNo) {
+    public ExamResult saveExamResultWithNo(ExamResultRequestDto examResultRequestDto, String studentNo) {
         // 1. Numaradan öğrenciyi bul
-        Student student = studentRepo.findByStudentNumber(studentNo);
+        Student student = findStudentByStudentNumber(studentNo);
         if (student == null) {
-            throw new RuntimeException("Öğrenci numarası bulunamadı: " + studentNo);
+            throw new ResourceNotFoundException(String.format(ErrorMessages.STUDENT_NOT_FOUND_BY_NUMBER, studentNo));
         }
-
         // 2. Mevcut DTO'nun içine bulduğumuz ID'yi yerleştir
-        dto.setStudentId(student.getId());
-
+        examResultRequestDto.setStudentId(student.getId());
         // 3. Zaten yazdığın ve tüm kontrollerin olduğu asıl metodu çağır
-        return saveExamResult(dto);
+        return saveExamResult(examResultRequestDto);
     }
 
     public ExamResultResponseDto updateExamResult(Long id, ExamResultRequestDto requestDto){
         // 1. Mevcut kaydı çek
-        ExamResult existingResult = resultRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Sonuc bulunamadi"));
-
-        // 2. Sayısal verileri güncelle (Null kontrolü yaparak)
-        if (requestDto.getLgsScore() != null) existingResult.setLgsScore(requestDto.getLgsScore());
-        if (requestDto.getNetCount() != null) existingResult.setNetCount(requestDto.getNetCount());
-        if (requestDto.getTotalCorrect() != null) existingResult.setCorrectCount(requestDto.getTotalCorrect());
-        if (requestDto.getTotalWrong() != null) existingResult.setWrongCount(requestDto.getTotalWrong());
-
-        // 3. Rankings güncelleme (Nested object kontrolü)
-        if (requestDto.getRankings() != null) {
-            existingResult.setRankings(requestDto.getRankings());
-        }
+        ExamResult existingResult = findExamResultByIdOrThrow(id);
+        resultMapper.updateEntityFromDto(requestDto, existingResult);
 
         // 4. LessonScores (Tüm listeyi yenilemek en temizidir)
         if (requestDto.getLessonScores() != null) {
             // 1. Adım: Tüm dersleri tek bir sorguyla çek ve Map'e dönüştür
-            // Veritabanına sadece 1 kez gidilir.
-            Map<String, Lesson> lessonMap = lessonRepo.findAll().stream()
-                    .collect(Collectors.toMap(Lesson::getName, lesson -> lesson));
+            Map<String, Lesson> lessonMap = getLessonMap(requestDto.getLessonScores());
+
             // 2. Mevcut skorları temizle (Yetim kayıt bırakmamak için)
             existingResult.getLessonScores().clear();
 
@@ -110,15 +150,14 @@ public class ExamResultService {
                 newScore.setExamResult(existingResult); // Hangi sınav sonucu? -> Ahmet'in Denemesi
 
                 // 5. Diğer verileri set et
-                newScore.setCorrectCount(scoreDto.getCorrectCount());
-                newScore.setWrongCount(scoreDto.getWrongCount());
-                newScore.setNetCount(scoreDto.getNetCount());
+                newScore.setScoreMetrics(scoreDto.getScoreMetrics());
 
                 // 5. Ana listeye ekle
                 existingResult.getLessonScores().add(newScore);
             }
         }
         ExamResult updated = resultRepo.save(existingResult);
+
         return convertToResponseDto(updated);
     }
 
@@ -128,43 +167,8 @@ public class ExamResultService {
     // MapStruct kütüphanesini kullanabilirsin.
     // MapStruct, senin verdiğin kurallara göre Entity -> DTO veya
     // DTO -> Entity dönüşümlerini derleme zamanında otomatik olarak kodlar.
-    private ExamResultResponseDto convertToResponseDto(ExamResult entity) {
-        // 1. Öğrencinin O SINAVIN AKADEMİK YILINDAKİ kaydını bul (JOIN mantığı kodda)
-        // StudentRegistryRepository kullanarak o yılın şubesini çekiyoruz
-        String branchAtThatTime = registryRepo.findSchoolClassBranchByStudentIdAndAcademicYearId(
-                entity.getStudent().getId(),
-                entity.getExam().getAcademicYear().getId()
-        ).orElseThrow(() -> new EntityNotFoundException(
-                "Öğrenci (ID: " + entity.getStudent().getId() +
-                        ") bu sınavın yapıldığı yılda bir sınıfa kayıtlı değil!"));
-// 2. DTO nesnesini constructor ile oluştur (Ders listesi hariç olan constructor)
-        ExamResultResponseDto dto = new ExamResultResponseDto(
-                entity.getId(),
-                entity.getStudent().getName(),
-                entity.getStudent().getSurname(),
-                entity.getStudent().getStudentNumber(),
-                branchAtThatTime,
-                entity.getExam().getLevel(),
-                entity.getExam().getTitle(),
-                entity.getExam().getDate(),
-                entity.getLgsScore(),
-                entity.getNetCount(),
-                entity.getCorrectCount(),
-                entity.getWrongCount(),
-                entity.getRankings()
-        );
 
-        // DERS SKORLARI BURADA:
-        // Zaten 'JOIN FETCH' ile geldiği için tekrar lessonScoreRepo çağırmıyoruz!
-        if (entity.getLessonScores() != null) {
-            List<LessonScoreDto> scoreDtos = entity.getLessonScores().stream()
-                    .map(ls -> new LessonScoreDto(ls.getLesson().getName(), ls.getCorrectCount(),
-                            ls.getWrongCount(), ls.getNetCount())) // Örnek map
-                    .collect(Collectors.toList());
-            dto.setLessonScores(scoreDtos);
-        }
-        return dto;
-    }
+
     private void validateExamResult(ExamResult result){
         Long studentId = result.getStudent().getId();
         Long yearId = result.getExam().getAcademicYear().getId();
@@ -193,22 +197,58 @@ public class ExamResultService {
     //UPDATE KISMINI YAP SONRA DA LGSSCORE'LARINI GUNCELLE
     //OGRENCININ SINIFIYLA DENEMENIN LEVELININ (SINIFINI) AYNI OLMASI CONSTRAINTINI YAZ
 
-    private Student findStudentById(Long studentId) {
+
+    private Student findStudentByIdOrThrow(Long studentId) {
         return studentRepo.findById(studentId)
                 .orElseThrow(() -> {
                     String errorMessage = String.format(ErrorMessages.STUDENT_NOT_FOUND, studentId);
-                    return new EntityNotFoundException(errorMessage);
+                    return new ResourceNotFoundException(errorMessage);
                 });
     }
+    private Student findStudentByStudentNumber(String studentNum){
+        return studentRepo.findByStudentNumber(studentNum);
+    }
 
-    private Exam findExamById(Long examId) {
+    private Exam findExamByIdOrThrow(Long examId) {
         return examRepo.findById(examId)
                 .orElseThrow(() -> {
                     String errorMessage = String.format(ErrorMessages.EXAM_NOT_FOUND, examId);
-                    return new EntityNotFoundException(errorMessage);
+                    return new ResourceNotFoundException(errorMessage);
                 });
     }
 
+    private ExamResult findExamResultByIdOrThrow(Long examResultId){
+        return resultRepo.findById(examResultId)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessages.EXAM_RESULT_NOT_FOUND, examResultId)));
+    }
+
+    /*
+        { "Math" -> Lesson(Math),
+        "Physics" -> Lesson(Physics)}
+    */
+    // DB'den tum dersleri ceker
+    private Map<String, Lesson> fetchLessonMap() {
+        return lessonRepo.findAll().stream()
+                .collect(Collectors.toMap(Lesson::getName, lesson -> lesson));
+    }
+    // DB'den sadece verilen dersleri ceker
+    private Map<String, Lesson> getLessonMap(List<LessonScoreDto> lessonScores) {
+        List<String> lessonNames = lessonScores.stream()
+                .map(LessonScoreDto::getLessonName)
+                .toList();
+        return lessonRepo.findByNameInIgnoreCase(lessonNames).stream()
+                .collect(Collectors.toMap(Lesson::getName, lesson -> lesson));
+    }
+
+    private Map<String, LessonScoreDto> toLessonScoreDtoMap(List<LessonScoreDto> list) {
+        if (list == null) return Map.of();
+        // lessonScoreDtoMap: { Turkce, LessonScoreDto(Turkce, scoreMetrics) }
+        return list.stream()
+                .collect(Collectors.toMap(
+                        LessonScoreDto::getLessonName,
+                        dto -> dto
+                ));
+    }
     private void validateExamConsistency(Student student, Exam exam, ExamResultRequestDto examResultRequestDto){
         // 2. Önce bu öğrenci bu sınava zaten girmiş mi? (Double Entry Check)
         // Çift kayıt kontrolü

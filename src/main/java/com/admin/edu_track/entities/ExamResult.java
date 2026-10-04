@@ -29,6 +29,7 @@ public class ExamResult {
 
     @Embedded
     private ScoreMetrics scoreMetrics;
+    private double lgsScore;
 
     @Embedded
     private Rankings rankings;

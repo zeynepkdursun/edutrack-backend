@@ -1,6 +1,7 @@
 package com.admin.edu_track.entities;
 
 
+import com.admin.edu_track.embeddings.ScoreMetrics;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -24,8 +25,7 @@ public class LessonScore {
     @JoinColumn(name="lesson_id", nullable = false)
     private Lesson lesson;
 
-    private int correctCount;
-    private int wrongCount;
-    private double netCount;
+    @Embedded
+    private ScoreMetrics scoreMetrics;
 
 }

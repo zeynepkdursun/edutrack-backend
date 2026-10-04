@@ -13,10 +13,10 @@ import java.util.List;
 @Repository
 public interface LessonScoreRepository extends JpaRepository<LessonScore, Long> {
 
-    @Query("SELECT new com.admin.edu_track.responseDto.LessonScoreDto(" +
+    /*@Query("SELECT new com.admin.edu_track.responseDto.LessonScoreDto(" +
             "l.name, ls.correctCount, ls.wrongCount, ls.netCount) " +
             "FROM LessonScore ls " +
             "JOIN ls.lesson l " + // LessonScore içindeki lesson alanını kullanıyoruz
             "WHERE ls.examResult.id = :resultId")
-    List<LessonScoreDto> findScoresByResultId(@Param("resultId") Long resultId);
+    List<LessonScoreDto> findScoresByResultId(@Param("resultId") Long resultId);*/
 }

@@ -18,6 +18,7 @@ public class ExamResultRequestDto {
     private Long examId;
     @Valid // ScoreMetrics içindeki validasyonların (varsa) çalışması için şart
     private ScoreMetrics scoreMetrics;
+    private double lgsScore;
     @NotEmpty(message = "En az bir ders sonucu girilmelidir")
     private List<LessonScoreDto> lessonScores;
     private Rankings rankings; // Embedded olduğu için doğrudan eklenebilir

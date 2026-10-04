@@ -9,5 +9,4 @@ public class ScoreMetrics {
     private int correctCount;
     private int wrongCount;
     private double netCount;
-    private double lgsScore;
 }

@@ -34,6 +34,8 @@ public class ExamResultController {
                                                                          @RequestParam(required = false) Long examId){
         return ResponseEntity.ok(resultService.getAllExamResultsDto(studentId, examId));
     }
+
+
     @PostMapping()
     public ResponseEntity<ExamResult> createExamResult(@RequestBody ExamResultRequestDto dto){
         return ResponseEntity.status(HttpStatus.CREATED).body(resultService.saveExamResult(dto));
