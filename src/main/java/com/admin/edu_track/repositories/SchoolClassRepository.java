@@ -10,8 +10,10 @@ import java.util.List;
 @Repository
 public interface SchoolClassRepository extends JpaRepository<SchoolClass, Long> {
 
-    boolean existsByLevelAndBranchAndAcademicYearId(int level, String branch, long yearId);
-    List<SchoolClass> findAllByLevel(int level);
-    List<SchoolClass> findAllByAcademicYearId(long yearId);
+    boolean existsByLevelAndBranchAndAcademicYearId(int level, String branch, Long yearId);
+    @Query("SELECT c FROM SchoolClass c " +
+            "WHERE (:yearId IS NULL OR c.academicYear.id = :yearId) " +
+            "AND (:level IS NULL OR c.level = :level)")
+    List<SchoolClass> findClassesByFilter(@Param("yearId") Long yearId, @Param("level") Integer level);
 
 }

@@ -1,77 +1,104 @@
 package com.admin.edu_track.services;
 
 
+import com.admin.edu_track.entities.AcademicYear;
 import com.admin.edu_track.entities.SchoolClass;
 import com.admin.edu_track.exceptions.AlreadyExistsException;
 import com.admin.edu_track.exceptions.ResourceNotFoundException;
+import com.admin.edu_track.repositories.AcademicYearRepository;
 import com.admin.edu_track.repositories.SchoolClassRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 public class SchoolClassService {
-    private SchoolClassRepository classRepo;
-    public SchoolClassService(SchoolClassRepository classRepo){
+    private final SchoolClassRepository classRepo;
+    private final AcademicYearRepository yearRepo;
+    public SchoolClassService(SchoolClassRepository classRepo, AcademicYearRepository yearRepo){
         this.classRepo = classRepo;
+        this.yearRepo = yearRepo;
     }
     /// GET METHODS
-    public List<SchoolClass> getAllClasses(){
-        return classRepo.findAll();
+    public List<SchoolClass> getClasses(Long yearId, Integer level){
+        return classRepo.findClassesByFilter(yearId, level);
     }
     public SchoolClass getClassById(Long classId){
-        return classRepo.findById(classId).orElse(null);
-    }
-    public List<SchoolClass> getClassesByLevel(int level) {
-        return classRepo.findAllByLevel(level);
-    }
-    public List<SchoolClass> getClassesByAcademicYearId(long yearId) {
-        return classRepo.findAllByAcademicYearId(yearId);
+        return classRepo.findById(classId).orElseThrow(() -> new ResourceNotFoundException("Class not found with id: " + classId));
     }
 
     ///  POST METHOD
+    @Transactional
     public SchoolClass createClass(SchoolClass newClass){
-        // Kontrol: Bu level ve branch kombinasyonu zaten var mı?
+
+        // 1. confirm if academicYear exists
+        Long yearId = validateAndGetYearId(newClass);
+        AcademicYear year = yearRepo.findById(yearId)
+                .orElseThrow(() -> new ResourceNotFoundException("Academic year not found with id: " + yearId));
+
+        String branchUpper = newClass.getBranch().trim().toUpperCase();
+
+        // Control: If this level/branch pair already exists?
         boolean exists = classRepo.existsByLevelAndBranchAndAcademicYearId(
                 newClass.getLevel(),
-                newClass.getBranch(),
-                newClass.getAcademicYear().getId()
+                branchUpper,
+                yearId
         );
         if (exists){
-            throw new AlreadyExistsException("Bu sinif (Orn: " + newClass.getLevel() + "-" +
-                    newClass.getBranch() + ") zaten sistemde kayitli!");
+            throw new AlreadyExistsException("Class (" + newClass.getLevel() + "-" +
+                    newClass.getBranch() + ") already exists in this academic year!");
         }
-        newClass.setBranch(newClass.getBranch().toUpperCase());
+        newClass.setBranch(branchUpper);
+        newClass.setAcademicYear(year);
         return classRepo.save(newClass);
     }
 
-    public SchoolClass updateClass(Long classId, SchoolClass newClass){
-        // 1. Önce güncellenecek sınıfı bul
-        SchoolClass existingClass = classRepo.findById(classId).orElseThrow(
-                () -> new ResourceNotFoundException("Sinif bulunamadi")
-        );
+    @Transactional
+    public SchoolClass updateClass(Long classId, SchoolClass newClass) {
 
-        // Değişiklik kontrolü: Level, Branch VEYA Year ID değişmiş mi?
-        boolean isChanged = existingClass.getLevel() != newClass.getLevel() ||
-                existingClass.getBranch() != newClass.getBranch() ||
-                !existingClass.getAcademicYear().getId().equals(newClass.getAcademicYear().getId());
+        // 1. Get the old class from db
+        SchoolClass existingClass = classRepo.findById(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found with id: " + classId));
 
-        // 2. Eğer level veya branch değişmişse, yeni halinin başkasıyla çakışıp çakışmadığına bak
-        if (isChanged) {
+
+        // 2. New class values
+        Long newYearId = validateAndGetYearId(newClass);
+        String newBranch = newClass.getBranch().trim().toUpperCase();
+        int newLevel = newClass.getLevel();
+
+        // 3. Compare with the old one. Has level, branch or year really changed?
+        boolean isLevelChanged = existingClass.getLevel() != newLevel;
+        boolean isBranchChanged = !existingClass.getBranch().equalsIgnoreCase(newBranch);
+        boolean isYearChanged = !existingClass.getAcademicYear().getId().equals(newYearId);
+
+        // 4. If any field of three changed, control that if that class already exists.
+        if (isLevelChanged || isBranchChanged || isYearChanged) {
             boolean exists = classRepo.existsByLevelAndBranchAndAcademicYearId(
-                    newClass.getLevel(),
-                    newClass.getBranch(),
-                    newClass.getAcademicYear().getId()
+                    newLevel,
+                    newBranch,
+                    newYearId
             );
 
             if (exists) {
-                throw new AlreadyExistsException("Bu seviye ve şubede başka bir sınıf zaten tanımlı!");
+                throw new AlreadyExistsException(
+                        "Class " + newLevel + "-" + newBranch + " already exists in the target academic year!"
+                );
             }
         }
-        // 3. Güncelleme işlemini yap
-        existingClass.setLevel(newClass.getLevel());
-        existingClass.setBranch(newClass.getBranch());
-        existingClass.setAcademicYear(newClass.getAcademicYear());
+
+        // 5. If year has changed, confirm the year and assign it
+        if (isYearChanged) {
+            AcademicYear newYear = yearRepo.findById(newYearId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Academic year not found with id: " + newYearId));
+            existingClass.setAcademicYear(newYear);
+        }
+
+        // 6. update the other fields and save
+
+        existingClass.setLevel(newLevel);
+        existingClass.setBranch(newBranch);
+
         return classRepo.save(existingClass);
     }
 
@@ -79,7 +106,15 @@ public class SchoolClassService {
 
     ///  DELETE METHOD
     public void deleteClass(Long classId){
-        SchoolClass schoolClass = classRepo.findById(classId).orElseThrow(() -> new ResourceNotFoundException("Sinif bulunamadi"));
+        SchoolClass schoolClass = classRepo.findById(classId).orElseThrow(() -> new ResourceNotFoundException("Class not found!"));
         classRepo.delete(schoolClass);
+    }
+
+
+    private Long validateAndGetYearId(SchoolClass schoolClass) {
+        if (schoolClass.getAcademicYear() == null || schoolClass.getAcademicYear().getId() == null) {
+            throw new IllegalArgumentException("Academic year ID must be provided!");
+        }
+        return schoolClass.getAcademicYear().getId();
     }
 }
