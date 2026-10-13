@@ -5,6 +5,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
+/*Eğer StudentRegistry tablosunda UNIQUE(student_number, academic_year_id) kuralı varsa,
+ kullanıcı butona kaç kez basarsa bassın sistem ikinci kaydı engeller.
+ Dolayısıyla evet, bunu StudentRegistry modülüne geldiğimizde konuşmak en mantıklısı.*/
 @Entity
 @Table(name="student_registry", indexes = {
         @Index(name = "idx_student_year", columnList = "student_id, academic_year_id", unique=true)

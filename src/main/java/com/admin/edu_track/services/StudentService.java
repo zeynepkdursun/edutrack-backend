@@ -1,10 +1,12 @@
 package com.admin.edu_track.services;
 
 import com.admin.edu_track.entities.Student;
+import com.admin.edu_track.exceptions.ResourceNotFoundException;
 import com.admin.edu_track.repositories.StudentRegistryRepository;
 import com.admin.edu_track.repositories.StudentRepository;
 import com.admin.edu_track.responseDto.StudentResponseDto;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -12,50 +14,44 @@ import java.util.List;
 
 @AllArgsConstructor
 @Service
+@Transactional(readOnly = true)
 public class StudentService {
-    private StudentRepository studentRepo;
-    private StudentRegistryRepository registryRepo;
+    private final StudentRepository studentRepo;
+    private final StudentRegistryRepository registryRepo;
 
 
     /// RETURNS ALL STUDENT DTO'S
-    public List<StudentResponseDto> getAllStudentsDto() {
-        return studentRepo.findAllStudents();
+    public List<StudentResponseDto> getAllStudentsDto(boolean activeOnly) {
+        return studentRepo.findAllStudents(activeOnly);
     }
+
     /// GET METHODS
-
-    public Student getStudentById(Long id){
-        return studentRepo.findById(id).orElseThrow(() -> new RuntimeException("Ogrenci bulunamadi"));
+    public Student getStudentById(Long studentId){
+        return studentRepo.findById(studentId).orElseThrow(
+                () -> new ResourceNotFoundException("Student not found with the id: " + studentId )
+        );
     }
-
 
     public List<Student> searchStudents(Long yearId, Integer level, String studentNum){
         return registryRepo.searchStudentsForExam(yearId, level, studentNum);
     }
-    /// ileride belirli bir yila gore olan sinif listesini getirt!!!!!!
-    public List<Student> getStudentsByClassId(Long classId){
+
+    public List<Student> getCurrentStudentsByClassId(Long classId){
         return registryRepo.findCurrentStudentsBySchoolClassId(classId);
-
-        /* return enrollments.stream().map(enrollment -> {
-            return enrollment.getStudent();
-        }).collect(Collectors.toList());*/
-
-        /*return enrollments.stream()
-                .map(StudentRegistry::getStudent) // Method Reference kullanımı
-                .collect(Collectors.toList());*/
     }
-    //BURADA ONCEKI YILLARDA DA AYNI STUDENTNO'LU OGRENCI VARSA BIRDEN FAZLA STUDENT DONECEK
-    //YEAR ID ILE FILTRELE SONRADAN!!!!!!!!!!
-    public Student getStudentByStudentNumber(String studentNo){
-        return studentRepo.findByStudentNumber(studentNo);
+
+    public Student getStudentByStudentNumberAndYearId(String studentNo, Long yearId){
+        return studentRepo.findByStudentNumberAndYearId(studentNo, yearId);
     }
 
     /// POST METHOD
+    @Transactional
     public Student saveStudent(Student newStudent){
         return studentRepo.save(newStudent);
     }
 
-
     /// PUT METHOD
+    @Transactional
     public Student updateStudent(Long studentId, Student newStudent){
         return studentRepo.findById(studentId)
                 .map(existingStudent -> {
@@ -64,17 +60,16 @@ public class StudentService {
                     existingStudent.setStudentNumber(newStudent.getStudentNumber());
                     return studentRepo.save(existingStudent);
                 })
-                .orElseThrow(() -> new EntityNotFoundException("Ogrenci bulunamadi")); // Eğer findById boş dönerse map çalışmaz ve null döner
+                .orElseThrow(() -> new EntityNotFoundException("Student not found with id: " + studentId));
     }
 
-    public Boolean deleteStudent(Long studentId){
-        if(studentRepo.existsById(studentId)){
-            studentRepo.deleteById(studentId);
-            return true;
+    @Transactional
+    public void deleteStudent(Long studentId){
+        Student student = studentRepo.findById(studentId).orElseThrow(() -> new ResourceNotFoundException("Student not found!"));
+        if (registryRepo.existsByStudentId(studentId)) {
+            throw new IllegalStateException("student with registry data cannot be deleted, first delete the registry records.");
         }
-        else{
-            return false;
-        }
+        studentRepo.delete(student);
     }
 
 }

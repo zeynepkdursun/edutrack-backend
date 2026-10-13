@@ -30,7 +30,7 @@ public class EduTrackApplication {
 										 ExamResultRepository examResultRepo
 	) {
 		return args -> {
-			if(classService.getAllClasses().isEmpty()){
+			if(classService.getClasses(null, null).isEmpty()){
 				System.out.println("DEMEMEEEEEEEEEEEEEEEEEEEEEeee");
 				AcademicYear year = createAcademicYear(yearRepo, "2024-2025", true);
 				Long yearId = 2L;
@@ -58,14 +58,9 @@ public class EduTrackApplication {
 				//createResult(examResultRepo, mehmet, deneme1);
 
 				System.out.println(">>> Test verileri (2 Sınıf, 3 Öğrenci, 1 Sınav) yüklendi!");}
-			else{
+			else {
 				System.out.println("db is fulllllll");
 			}
-
-
-			//System.out.println("test data is successfully loaded");
-
-			//System.out.println("db is already full with ali");
 
 		};
 	}

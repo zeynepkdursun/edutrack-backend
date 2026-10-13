@@ -2,6 +2,8 @@ package com.admin.edu_track.controllers;
 import com.admin.edu_track.entities.Student;
 import com.admin.edu_track.responseDto.StudentResponseDto;
 import com.admin.edu_track.services.StudentService;
+import jakarta.validation.Valid;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,28 +15,24 @@ import java.util.List;
 @RequestMapping("/api/students")
 public class StudentController {
 
-    private StudentService studentService;
+    private final StudentService studentService;
 
     public StudentController(StudentService studentService){
         this.studentService = studentService;
     }
 
-    /*@GetMapping
-    public ResponseEntity<List<Student>> getAllStudents(@RequestParam(required = false) Long yearId,
-                                                        @RequestParam(required = false) Long classId){
-        return ResponseEntity.ok(studentService.getAllStudents(yearId, classId));
-        //return new ResponseEntity<>(studentService.getAllStudents(), HttpStatus.OK);
-    }*/
+    @GetMapping
+    public ResponseEntity<List<StudentResponseDto>> getAllStudents(@RequestParam(value = "activeOnly", required = false, defaultValue = "true") Boolean activeOnly){
+        return ResponseEntity.ok(studentService.getAllStudentsDto(activeOnly));
+    }
 
     @GetMapping("/{id}")
     public ResponseEntity<Student> getStudentById(@PathVariable Long id){
         return ResponseEntity.ok(studentService.getStudentById(id));
     }
-    @GetMapping("/all-details")
-    public List<StudentResponseDto> getActiveStudents() {
-        return studentService.getAllStudentsDto();
-    }
 
+
+    // api/students/search?student-no=500&yearId=2&level=7
     @GetMapping("/search")
     public ResponseEntity<List<Student>> getStudentByStudentNumber(@RequestParam(required = false, name ="student-no") String studentNo,
                                                                    @RequestParam(required = false) Long yearId,
@@ -43,43 +41,31 @@ public class StudentController {
         return ResponseEntity.ok(students);
     }
 
-    //FETCH STUDENTS FROM A SPECIFIC CLASS -> 8-A sınıfındaki öğrencileri getir.
-    // Guncel egitim ogretim yilindaki
+    //FETCH STUDENTS FROM A SPECIFIC CLASS -> get students from the class 8-A in the current academic year
     @GetMapping("/class/{classId}")
-    public ResponseEntity<List<Student>> getStudentsByClass(@PathVariable Long classId){
-        List<Student> students = studentService.getStudentsByClassId(classId);
-        if (students.isEmpty()){
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.ok(students);
+    public ResponseEntity<List<Student>> getCurrentStudentsByClass(@PathVariable Long classId){
+        return ResponseEntity.ok(studentService.getCurrentStudentsByClassId(classId));
     }
 
 
-    //ayni yilda ayni studentNoya sahip ogrenci create edilemesin (LATER))))))))))))))))))
-    @PostMapping
-    public ResponseEntity<Student> createStudent(@RequestBody Student student){
+
+    /*@PostMapping
+    public ResponseEntity<Student> createStudent(@RequestBody @Valid Student student){
         Student createdStudent = studentService.saveStudent(student);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdStudent);
         //return new ResponseEntity<>(createdStudent, HttpStatus.CREATED);
-
-
-    }
+    }*/
 
     @PutMapping("/{studentId}")
-    public ResponseEntity<Student> updateStudent(@PathVariable Long studentId, @RequestBody Student student){
+    public ResponseEntity<Student> updateStudent(@PathVariable Long studentId, @Valid @RequestBody Student student){
         Student updatedStudent = studentService.updateStudent(studentId, student);
         return ResponseEntity.ok(updatedStudent);
     }
 
     @DeleteMapping("/{studentId}")
     public ResponseEntity<Void> deleteStudent(@PathVariable Long studentId){
-        if(studentService.deleteStudent(studentId)){
-            return ResponseEntity.ok().build();
-        }
-        else{
-            return ResponseEntity.notFound().build();
-        }
-
+        studentService.deleteStudent(studentId);
+        return ResponseEntity.noContent().build();
     }
 
 /*

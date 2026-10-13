@@ -7,12 +7,14 @@ import com.admin.edu_track.exceptions.AlreadyExistsException;
 import com.admin.edu_track.exceptions.ResourceNotFoundException;
 import com.admin.edu_track.repositories.AcademicYearRepository;
 import com.admin.edu_track.repositories.SchoolClassRepository;
-import jakarta.transaction.Transactional;
+//import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@Transactional(readOnly = true)
 public class SchoolClassService {
     private final SchoolClassRepository classRepo;
     private final AcademicYearRepository yearRepo;

@@ -38,6 +38,7 @@ public interface StudentRegistryRepository extends JpaRepository<StudentRegistry
             "AND r.academicYear.id = :yearId")
     Optional<Integer> findSchoolClassLevelByStudentIdAndYearId(@Param("studentId") Long studentId, @Param("yearId") Long yearId);
 
+    boolean existsByStudentId(Long studentId);
     boolean existsByStudentIdAndAcademicYearId(Long studentId, Long academicYearId);
     boolean existsByStudentIdAndAcademicYearIdAndIdNot(Long studentId, Long academicYearId, Long id);
 
